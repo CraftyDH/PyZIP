@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 import os
 from typing import Union
-from action.extract import extract
-from action.move import move
-from action.remove import remove
 from action.add import add
 from action.read import readFile
 import argparser
@@ -13,7 +10,7 @@ import structs
 import tempfile
 import shutil
 import time
-from tools import writeChanges, info
+from tools import writeChanges, info, sizeof_fmt
 
 
 def writeDirectory(zip, centraldirectory, offset):
@@ -44,8 +41,6 @@ def run(args: str = None):
     centralDirectory = []
     info.set(args.verbosity)
     info.print(args, 3)
-
-    filenames = [os.path.basename(name) for name in args.files]
 
     # Check if zip file is empty
     if not os.path.exists(args.zip):
@@ -197,8 +192,23 @@ def run(args: str = None):
                 _file.write(content)
 
     elif args.action == "info":
-        info(args)
-
+        # List in depth info about each file
+        if args.file:
+            for file in centralDirectory:
+                if file["filename"] == os.path.basename(args.file):
+                    header = file["header"]
+                    info.print("File: " + file["filename"])
+                    break
+            else:
+                print("File not in zip.")
+        # List info about zip file
+        else:
+            info.print("Zip file: " + os.path.basename(args.zip))
+            info.print("Files:")
+            for file in centralDirectory:
+                header = file["header"]
+                info.print("⤷ " + file["filename"] +
+                           sizeof_fmt(header.uncommpressedsize))
     # def info(text: str, level=0):
     #     if args.verbosity >= level:
     #         print(text)

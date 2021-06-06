@@ -33,3 +33,11 @@ def writeChanges(name, newfile):
     for chunk in newfile:
         # Write the chunks and increment size
         origin.write(chunk)
+
+
+# https://stackoverflow.com/questions/1094841/get-human-readable-version-of-file-size
+def sizeof_fmt(num):
+    for unit in ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB']:
+        if abs(num) < 1024.0:
+            return "%3.0f %s" % (num, unit)
+        num /= 1024.0
