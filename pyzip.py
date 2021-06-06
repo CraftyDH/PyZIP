@@ -6,10 +6,15 @@ from action.extract import extract
 from action.move import move
 from action.remove import remove
 from action.add import add
+from action.read import readFile
 import argparser
 import mmap
 from struct import *
 import structs
+import tempfile
+import shutil
+import time
+from tools import writeChanges
 
 
 def writeDirectory(zip, centraldirectory, offset):
@@ -35,60 +40,63 @@ def writeDirectory(zip, centraldirectory, offset):
 def run(args: str = None):
     # Get args given to program
     args = argparser.parser.parse_args(args)
-    zipfile: open = None
-    if not os.path.exists(args.zip):
-        if args.action == "add":
-            zipfile = open(args.zip, "w+b")
-        else:
-            print("There is no file named: " + args.zip + "\nQuiting...")
-            exit(0)
-    else:
-        zipfile = open(args.zip, "r+b")
+    origin: open = None
 
     centralDirectory = []
-    centraldirstart = 0
 
-    test = zipfile.readline(2)
-
-    # Check if zip file
-    if test != b"PK":
-        if args.action != "add" and test == None:
-            print("File " + args.zip + " is not a zip file. \nQuiting...")
+    # Check if zip file is empty
+    if not os.path.exists(args.zip):
+        # If action is add an empty file is allowed
+        if args.action != "add":
+            print("There is no file named: " + args.zip + "\nQuiting...")
             exit(0)
+        # Therefore create the file
+        else:
+            origin = open(args.zip, "x+b")
+    # Open the file
     else:
-        # Read central header
-        zipmm = mmap.mmap(zipfile.fileno(), 0)
+        shutil.move(args.zip, args.zip + ".bak.zip")
+        origin = open(args.zip + ".bak.zip", "r+b")
 
-        # Find start of central directory
-        centralstart = zipmm.rfind(b'\x50\x4b\x05\x06', zipmm.size()-250)
+        test = origin.readline(2)
 
-        # Seek file to that position
-        zipmm.seek(centralstart)
+        # Check if zip file
+        if test != b"PK":
+            if args.action != "add" and test == None:
+                print("File " + args.zip + " is not a zip file. \nQuiting...")
+                exit(0)
+        else:
+            # Read central header use MMAP to find central header
+            zipmm = mmap.mmap(origin.fileno(), 0, access=mmap.ACCESS_READ)
 
-        # Read central header into a namedtuple
-        endofcentral = structs.endOfCentral._make(structs.endOfCentralStruct.unpack(
-            zipmm.read(structs.endOfCentralStruct.size)))
+            # Find start of central directory
+            centralstart = zipmm.rfind(b'\x50\x4b\x05\x06')
 
-        # Print the comment
-        print(zipmm.read(endofcentral.commentlen))
+            # Seek file to that position
+            zipmm.seek(centralstart)
 
-        centraldirstart = endofcentral.offsetcentral
+            # Read central header into a namedtuple
+            endofcentral = structs.endOfCentral._make(structs.endOfCentralStruct.unpack(
+                zipmm.read(structs.endOfCentralStruct.size)))
 
-        # Start reading the entries
-        zipmm.seek(endofcentral.offsetcentral)
-        for _ in range(endofcentral.totalentries):
-            entry = {}
-            centralheader = structs.centralHeader._make(
-                structs.centralHeaderStruct.unpack(zipmm.read(structs.centralHeaderStruct.size)))
+            # Print the comment
+            print(zipmm.read(endofcentral.commentlen))
 
-            entry["header"] = centralheader
-            entry["filename"] = str(zipmm.read(
-                centralheader.filenamelen), 'utf-8')
-            entry["extra"] = str(zipmm.read(
-                centralheader.extralen), 'utf-8')
-            entry["comment"] = str(zipmm.read(
-                centralheader.commentlen), 'utf-8')
-            centralDirectory.append(entry)
+            # Start reading the entries
+            zipmm.seek(endofcentral.offsetcentral)
+            for _ in range(endofcentral.totalentries):
+                entry = {}
+                centralheader = structs.centralHeader._make(
+                    structs.centralHeaderStruct.unpack(zipmm.read(structs.centralHeaderStruct.size)))
+
+                entry["header"] = centralheader
+                entry["filename"] = str(zipmm.read(
+                    centralheader.filenamelen), 'utf-8')
+                entry["extra"] = str(zipmm.read(
+                    centralheader.extralen), 'utf-8')
+                entry["comment"] = str(zipmm.read(
+                    centralheader.commentlen), 'utf-8')
+                centralDirectory.append(entry)
 
     print(centralDirectory)
     # Check if empty file
@@ -96,20 +104,79 @@ def run(args: str = None):
     print(args)
     # Call function to handle each task case
     if args.action == "add":
-        offset = centraldirstart
-        # centralDirectory = []
-        zipfile.seek(centraldirstart, 0)
+        offset = 0
+        newfile = tempfile.NamedTemporaryFile("w+b")
+
+        # Read into
+        for file in centralDirectory:
+            header, fname, extra, file = readFile(
+                origin, file["header"].localoffset)
+
+            towrite = structs.headerStruct.pack(
+                *header) + fname + extra + file
+            offset += len(towrite)
+            newfile.write(towrite)
+
         for file in args.files:
-            header, size = add(file, offset, zipfile)
-            offset += size
+            write, header = add(file, offset)
+            offset += len(write)
+            newfile.write(write)
             centralDirectory.append(header)
-        writeDirectory(zipfile, centralDirectory, offset)
+        writeDirectory(newfile, centralDirectory, offset)
+
+        # origin.close()
+
+        # with open(origin.name, "wb") as origin:
+        writeChanges(args.zip, newfile)
+
+        # shutil.move(newfile.name, args.zip)
+
     elif args.action == "remove":
-        remove(args)
+        offset = 0
+        newfile = tempfile.NamedTemporaryFile("w+b")
+
+        newCentralDirectory = []
+        # Read into
+        for file in centralDirectory:
+            if file["filename"] not in args.files:
+                header, fname, extra, content = readFile(
+                    origin, file["header"].localoffset)
+
+                towrite = structs.headerStruct.pack(
+                    *header) + fname + extra + content
+
+                newDirectory = file
+                newHeader: structs.centralHeader = file["header"]
+                newHeader = newHeader._replace(localoffset=offset)
+                newDirectory["header"] = newHeader
+                newCentralDirectory.append(newDirectory)
+
+                offset += len(towrite)
+                newfile.write(towrite)
+
+        if not newCentralDirectory:
+            print("Removed all files")
+            quit(0)
+
+        writeDirectory(newfile, newCentralDirectory, offset)
+        writeChanges(args.zip, newfile)
+
     elif args.action == "move":
         move(args)
     elif args.action == "extract":
-        extract(args)
+        for file in centralDirectory:
+            # origin.seek(file["header"].localoffset)
+            # header = structs.header._make(
+            #     structs.headerStruct.unpack(origin.read(structs.headerStruct.size)))
+            # filename = origin.read(header.filenamelen)
+            # origin.seek(header.extralen, os.SEEK_CUR)
+            header, fname, extra, content = readFile(
+                origin, file["header"].localoffset)
+            print(fname)
+
+            with open("output/" + str(fname, 'utf-8'), "w+b") as _file:
+                _file.write(content)
+
     elif args.action == "info":
         info(args)
 
@@ -119,8 +186,8 @@ def run(args: str = None):
 
     # info(args, 3)
 
-    # zipfile.truncate()
-    # zipfile.close()
+    # origin.truncate()
+    # origin.close()
 
 
 if __name__ == "__main__":

@@ -7,7 +7,10 @@ import structs
 import mmap
 
 
-def add(filename, offset, zip):
+# def write(content, header, zip):
+
+
+def add(filename, offset):
     version = 20
     flags = 0
     compression = 0
@@ -18,6 +21,7 @@ def add(filename, offset, zip):
     fileinfo = os.stat(filename)
     f = open(filename, "r+b").read()
     filename = os.path.basename(filename)
+    os.path.abspath(filename)
     # info("Compressing " + filename + "...")
 
     modtime, moddate = mktime(time.localtime(fileinfo.st_ctime))
@@ -49,6 +53,5 @@ def add(filename, offset, zip):
         "extra": extra,
         "comment": "Comment"}
     print(centraldirectory)
-    towrite = header + bytes(filename + extra, 'utf-8') + f
-    zip.write(towrite)
-    return (centraldirectory, len(towrite))
+    file = header + bytes(filename + extra, 'utf-8') + f
+    return (file, centraldirectory)
