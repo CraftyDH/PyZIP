@@ -11,6 +11,8 @@ import tempfile
 import shutil
 import time
 from tools import *
+import zlib
+import action.compress as compress
 
 
 def writeDirectory(zip, centraldirectory, offset):
@@ -135,7 +137,7 @@ def run(args: str = None):
         for file in args.files:
             info.print('Adding "' + file + '" to zip file.', 1)
             # Get file metadata
-            write, header = add(file, addpath, offset)
+            write, header = add(file, addpath, args.compresstype, offset)
             # Write file
             newfile.write(write)
             # Increment offset
@@ -191,12 +193,13 @@ def run(args: str = None):
             header, fname, extra, content = readFile(
                 origin, file["header"].localoffset)
 
-            outputpath = os.path.join(
-                args.output, file["filename"], 'utf-8')
-            os.makedirs(os.path.dirname(outputpath), exist_ok=True)
+            data = compress.Decompress(content, header.compression)
 
+            outputpath = os.path.join(
+                args.output, file["filename"])
+            os.makedirs(os.path.dirname(outputpath), exist_ok=True)
             with open(outputpath, "w+b") as _file:
-                _file.write(content)
+                _file.write(data)
 
     elif args.action == "info":
         # List in depth info about each file

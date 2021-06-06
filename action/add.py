@@ -3,23 +3,24 @@ import os
 import time
 from tools import mktime
 from zlib import crc32
+import zlib
 import structs
 import mmap
+from action.compress import CompressionTypes, Compress
 
 
 # def write(content, header, zip):
 
 
-def add(filename, path, offset):
+def add(filename, path, compresstype, offset):
     version = 20
     flags = 0
-    compression = 0
     extra = b""
 
     centraldirectory = []
 
     fileinfo = os.stat(filename)
-    f = open(filename, "r+b").read()
+    f = open(filename, "rb").read()
     filename = os.path.join(path, os.path.basename(filename))
     os.path.abspath(filename)
     # info("Compressing " + filename + "...")
@@ -27,22 +28,36 @@ def add(filename, path, offset):
     modtime, moddate = mktime(time.localtime(fileinfo.st_ctime))
     filenamelen = len(filename)
 
+    compressed = Compress(f, compresstype)
+
+    # Only set compressed if lower
+    if len(compressed) < len(f):
+        print("Good")
+        data = compressed
+    # Otherwise just store it
+    else:
+        data = f
+        compresstype = CompressionTypes.STORE.value
+
+    # deflate = zlib.compressobj(9, zlib.DEFLATED, -zlib.MAX_WBITS)
+    # data = deflate.compress(f) + deflate.flush()
+
     checksum = crc32(f)
 
     header = structs.headerStruct.pack(
         b"\x50\x4b\x03\x04",
-        version, flags, compression,
+        version, flags, compresstype,
         modtime, moddate,
         checksum,
-        fileinfo.st_size, fileinfo.st_size,
+        len(data), fileinfo.st_size,
         len(filename), len(extra)
     )
     centralheader = structs.centralHeader(
         b"\x50\x4b\x01\x02", 3 << 8 | 23,
-        version, flags, compression,
+        version, flags, compresstype,
         modtime, moddate,
         checksum,
-        fileinfo.st_size, fileinfo.st_size,
+        len(data), fileinfo.st_size,
         len(filename), len(extra), len("Comment"),
         0, 1, 0,
         offset,
@@ -53,5 +68,5 @@ def add(filename, path, offset):
         "extra": extra,
         "comment": "Comment"}
     print(centraldirectory)
-    file = header + bytes(filename, 'utf-8') + extra + f
+    file = header + bytes(filename, 'utf-8') + extra + data
     return (file, centraldirectory)

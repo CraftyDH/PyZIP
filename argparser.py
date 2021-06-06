@@ -49,7 +49,13 @@ __add.add_argument("files", type=checkFile, nargs="+")
 __add.add_argument("-p", "--path", default="",
                    help="Path to store files in ZIP file")
 __add.add_argument("-c", "--comment", default="", help="Comment for each file")
-
+__compress = __add.add_mutually_exclusive_group()
+__compress.add_argument("-d", "--deflate", action="store_const", default=8,
+                        const=8, dest="compresstype")
+__compress.add_argument("-b", "--bzip2", action="store_const",
+                        const=46, dest="compresstype")
+__compress.add_argument("-s", "--store", action="store_const",
+                        const=0, dest="compresstype")
 # Set args for remove action
 __remove = __subparser.add_parser("remove")
 __remove.add_argument("files", nargs="+")
