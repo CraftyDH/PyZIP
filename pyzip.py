@@ -10,7 +10,7 @@ import structs
 import tempfile
 import shutil
 import time
-from tools import writeChanges, info, sizeof_fmt
+from tools import *
 
 
 def writeDirectory(zip, centraldirectory, offset):
@@ -18,7 +18,8 @@ def writeDirectory(zip, centraldirectory, offset):
     for directory in centraldirectory:
         centralheader, filename, extra, comment = directory.values()
         packed = structs.centralHeaderStruct.pack(*centralheader)
-        towrite = packed + bytes(filename + extra + comment, "utf-8")
+        towrite = packed + bytes(filename, "utf-8") + \
+            extra + bytes(comment, "utf-8")
         centraldirectorysize += len(towrite)
         zip.write(towrite)
 
@@ -89,11 +90,14 @@ def run(args: str = None):
                 centralheader = structs.centralHeader._make(
                     structs.centralHeaderStruct.unpack(zipmm.read(structs.centralHeaderStruct.size)))
 
+                print(centralheader)
+
                 entry["header"] = centralheader
-                entry["filename"] = str(zipmm.read(
-                    centralheader.filenamelen), 'utf-8')
-                entry["extra"] = str(zipmm.read(
-                    centralheader.extralen), 'utf-8')
+                entry["filename"] = sanitizePath(str(zipmm.read(
+                    centralheader.filenamelen), 'utf-8'))
+                print(zipmm.tell())
+                entry["extra"] = zipmm.read(
+                    centralheader.extralen)
                 entry["comment"] = str(zipmm.read(
                     centralheader.commentlen), 'utf-8')
                 centralDirectory.append(entry)
@@ -103,13 +107,14 @@ def run(args: str = None):
         info.print("Adding files...")
         offset = 0
         newfile = tempfile.NamedTemporaryFile("w+b")
+        addpath = sanitizePath(args.path)
 
         # Read into
         for file in centralDirectory:
             # Check if file is in the zip file allready
-            if file["filename"] in args.files:
+            if file["filename"] in [addpath + os.sep + name for name in args.files]:
                 info.print('Overriding "' +
-                           file["filename"] + '" found in zip file.')
+                           path + '" found in zip file.')
                 # remove file from central directory
                 centralDirectory.remove(file)
                 continue
@@ -130,7 +135,7 @@ def run(args: str = None):
         for file in args.files:
             info.print('Adding "' + file + '" to zip file.', 1)
             # Get file metadata
-            write, header = add(file, offset)
+            write, header = add(file, addpath, offset)
             # Write file
             newfile.write(write)
             # Increment offset
@@ -150,7 +155,7 @@ def run(args: str = None):
         newCentralDirectory = []
         # Read into
         for file in centralDirectory:
-            if file["filename"] not in filenames:
+            if file["filename"] not in args.files:
                 header, fname, extra, content = readFile(
                     origin, file["header"].localoffset)
 
@@ -174,21 +179,23 @@ def run(args: str = None):
         writeChanges(args.zip, newfile)
 
     elif args.action == "extract":
-        outputpath = os.path.join(args.output)
-        os.makedirs(outputpath, exist_ok=True)
         for file in centralDirectory:
+            # No folders 7zip!!!
+            if file["filename"][-1] == "/":
+                continue
             if args.files:
-                if file["filename"] not in filenames:
+                if file["filename"] not in args.files:
                     continue
-            info.print('Extracting: "' + file["filename"])
-            # origin.seek(file["header"].localoffset)
-            # header = structs.header._make(
-            #     structs.headerStruct.unpack(origin.read(structs.headerStruct.size)))
-            # filename = origin.read(header.filenamelen)
-            # origin.seek(header.extralen, os.SEEK_CUR)
+            info.print('Extracting: "' + file["filename"] + '"')
+
             header, fname, extra, content = readFile(
                 origin, file["header"].localoffset)
-            with open(os.path.join(outputpath, str(fname, 'utf-8')), "w+b") as _file:
+
+            outputpath = os.path.join(
+                args.output, file["filename"], 'utf-8')
+            os.makedirs(os.path.dirname(outputpath), exist_ok=True)
+
+            with open(outputpath, "w+b") as _file:
                 _file.write(content)
 
     elif args.action == "info":

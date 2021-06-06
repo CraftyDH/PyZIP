@@ -10,17 +10,17 @@ import mmap
 # def write(content, header, zip):
 
 
-def add(filename, offset):
+def add(filename, path, offset):
     version = 20
     flags = 0
     compression = 0
-    extra = ""
+    extra = b""
 
     centraldirectory = []
 
     fileinfo = os.stat(filename)
     f = open(filename, "r+b").read()
-    filename = os.path.basename(filename)
+    filename = os.path.join(path, os.path.basename(filename))
     os.path.abspath(filename)
     # info("Compressing " + filename + "...")
 
@@ -53,5 +53,5 @@ def add(filename, offset):
         "extra": extra,
         "comment": "Comment"}
     print(centraldirectory)
-    file = header + bytes(filename + extra, 'utf-8') + f
+    file = header + bytes(filename, 'utf-8') + extra + f
     return (file, centraldirectory)

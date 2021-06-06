@@ -1,5 +1,8 @@
 import time
 import mmap
+import os
+
+INVALID_PATH_PARTS = ('', '.', '..')
 
 
 class info():
@@ -13,6 +16,21 @@ class info():
     def print(cls, text, outputlevel=0):
         if outputlevel <= cls.level:
             print(text)
+
+
+def sanitizePath(path):
+    # Remove drive letters
+    path = os.path.splitdrive(path)[1]
+    # Incase backwards / for path
+    path = path.replace('\\', '/')
+
+    pathparts = path.split('/')
+    path = []
+    for segment in pathparts:
+        if segment not in INVALID_PATH_PARTS:
+            path.append(segment)
+
+    return os.path.sep.join(path)
 
 
 def mktime(ctime: time.struct_time):

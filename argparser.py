@@ -46,7 +46,8 @@ __subparser = parser.add_subparsers(
 # Set args for add action
 __add = __subparser.add_parser("add")
 __add.add_argument("files", type=checkFile, nargs="+")
-__add.add_argument("-p", "--path", help="Path to store files in ZIP file")
+__add.add_argument("-p", "--path", default="",
+                   help="Path to store files in ZIP file")
 __add.add_argument("-c", "--comment", default="", help="Comment for each file")
 
 # Set args for remove action
@@ -58,7 +59,7 @@ __extract = __subparser.add_parser("extract")
 __extract.add_argument(
     "files", nargs="*", help="The files to extract. If none all files will be extracted")
 __extract.add_argument(
-    "-o", "--output", help="Where to store the extracted files.")
+    "-o", "--output", default="output", help="Where to store the extracted files.")
 
 # Set args for info action
 __info = __subparser.add_parser("info")

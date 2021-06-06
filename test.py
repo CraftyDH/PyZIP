@@ -4,6 +4,7 @@ import zipfile
 import os
 import shutil
 import filecmp
+from tools import sanitizePath
 
 
 def checkFileEqual(self, f1, f2):
@@ -23,14 +24,6 @@ def checkFolders(self):
     check = filecmp.dircmp("test", "check")
     self.assertFalse(bool(check.diff_files) or bool(
         check.left_only) or bool(check.right_only))
-
-
-def checkZips(self):
-    with zipfile.ZipFile("test.zip") as f:
-        f.extractall("test")
-    with zipfile.ZipFile("check.zip") as f:
-        f.extractall("check")
-    checkFolders(self)
 
 
 def clean():
@@ -74,47 +67,91 @@ def extract(files=[]):
     runPyzip(["test.zip", "extract", *files, "-o", "test"])
 
 
+class Test_Sanitization(unittest.TestCase):
+    def test(self):
+        self.assertEqual(sanitizePath("path"), "path")
+        self.assertEqual(sanitizePath("C:/path"), "path")
+        self.assertEqual(sanitizePath("D://path"), "path")
+        self.assertEqual(sanitizePath("../../../../path"), "path")
+        self.assertEqual(sanitizePath("path/path/path"),
+                         "path{0}path{0}path".format(os.sep))
+        self.assertEqual(sanitizePath("path/path/../path"),
+                         "path{0}path{0}path".format(os.sep))
+        self.assertEqual(sanitizePath("path\\path\\path"),
+                         "path{0}path{0}path".format(os.sep))
+        self.assertEqual(sanitizePath("path//path//path"),
+                         "path{0}path{0}path".format(os.sep))
+        self.assertEqual(sanitizePath("path\\\\path\\\\path"),
+                         "path{0}path{0}path".format(os.sep))
+
+
 class Test_Add(unittest.TestCase):
     def testCleanAdd(self):
         clean()
+        copyToCheck(["testfiles/1.md"])
         add(["testfiles/1.md"])
-        checkFiles(self, ["testfiles/1.md"])
+
+        with zipfile.ZipFile("test.zip") as f:
+            f.extractall("test")
+
+        checkFolders(self)
     # Add 1 file and check that files are the same
 
     def testAdd_5(self):
         clean()
+        copyToCheck(["testfiles/1.md", "testfiles/2.md",
+                     "testfiles/3.md", "testfiles/4.md", "testfiles/5.md"])
         add(["testfiles/1.md", "testfiles/2.md",
              "testfiles/3.md", "testfiles/4.md", "testfiles/5.md"])
-        checkFiles(self, ["testfiles/1.md", "testfiles/2.md",
-                          "testfiles/3.md", "testfiles/4.md", "testfiles/5.md"])
+
+        with zipfile.ZipFile("test.zip") as f:
+            f.extractall("test")
+
+        checkFolders(self)
 
     def testAdd_1_then_2(self):
         clean()
+        copyToCheck(["testfiles/1.md", "testfiles/2.md",
+                     "testfiles/3.md"])
+
         add(["testfiles/1.md"])
         add(["testfiles/2.md", "testfiles/3.md"])
-        checkFiles(self, ["testfiles/1.md", "testfiles/2.md",
-                          "testfiles/3.md"])
+
+        with zipfile.ZipFile("test.zip") as f:
+            f.extractall("test")
+
+        checkFolders(self)
+
+    def testAddFilesToFolder(self):
+        clean()
 
 
 class Test_Remove(unittest.TestCase):
     def testCleanRemove(self):
         clean()
-        addcheck(["testfiles/2.md"])
+        copyToCheck(["testfiles/2.md"])
 
         add(["testfiles/1.md", "testfiles/2.md"])
         remove(["1.md"])
-        checkZips(self)
+
+        with zipfile.ZipFile("test.zip") as f:
+            f.extractall("test")
+
+        checkFolders(self)
 
     def testRemoveAddRemove(self):
         clean()
-        addcheck(["testfiles/3.md"])
+        copyToCheck(["testfiles/3.md"])
 
         add(["testfiles/1.md", "testfiles/2.md"])
         remove(["1.md"])
         add(["testfiles/3.md", "testfiles/4.md"])
         remove(["2.md", "4.md"])
 
-        checkZips(self)
+        with zipfile.ZipFile("test.zip") as f:
+            f.extractall("test")
+
+        checkFolders(self)
 
 
 class Test_Extract(unittest.TestCase):
@@ -133,5 +170,5 @@ class Test_Extract(unittest.TestCase):
         copyToCheck(["testfiles/2.md"])
 
         add(["testfiles/1.md", "testfiles/2.md"])
-        extract(["testfiles/2.md"])
+        extract(["2.md"])
         checkFolders(self)
