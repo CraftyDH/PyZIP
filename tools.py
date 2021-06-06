@@ -9,8 +9,9 @@ class info():
     def set(cls, level):
         cls.level = level
 
-    def print(cls, text, outputlevel):
-        if outputlevel >= cls.level:
+    @classmethod
+    def print(cls, text, outputlevel=0):
+        if outputlevel <= cls.level:
             print(text)
 
 

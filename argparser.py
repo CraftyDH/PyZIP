@@ -2,6 +2,7 @@ import argparse
 import os
 from typing import Union
 
+
 def checkZIP(path: str):
     """
     Check if file is not a zip to avoid overriding a file.
@@ -34,9 +35,9 @@ parser.add_argument("zip", help="the path to the zip file.")
 # Verbosity counter
 __verbosity = parser.add_mutually_exclusive_group()
 __verbosity.add_argument("-v", default=0, action="count",
-                       dest="verbosity", help="Verbosity level, up -vvv")
+                         dest="verbosity", help="Verbosity level, up -vvv")
 __verbosity.add_argument("-s", action="store_const",
-                       const=-1, dest="verbosity", help="Silent")
+                         const=-1, dest="verbosity", help="Silent")
 
 # Subparse to find which action is used
 __subparser = parser.add_subparsers(
@@ -52,11 +53,6 @@ __add.add_argument("-c", "--comment", default="", help="Comment for each file")
 __remove = __subparser.add_parser("remove")
 __remove.add_argument("files", nargs="+")
 
-# Set args for move action
-__move = __subparser.add_parser("move")
-__move.add_argument("file")
-__move.add_argument("destination")
-
 # Set args for extract action
 __extract = __subparser.add_parser("extract")
 __extract.add_argument(
@@ -67,6 +63,6 @@ __extract.add_argument(
 # Set args for info action
 __info = __subparser.add_parser("info")
 __info.add_argument("File", nargs="?",
-                  help="shows infomation about the file/folder")
+                    help="shows infomation about the file/folder")
 __info.add_argument("-r", "--recursive",
-                  help="shows info recursively through each folder")
+                    help="shows info recursively through each folder")
