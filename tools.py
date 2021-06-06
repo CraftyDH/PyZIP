@@ -1,5 +1,4 @@
 import time
-import mmap
 import os
 
 INVALID_PATH_PARTS = ('', '.', '..')
@@ -14,6 +13,7 @@ class info():
 
     @classmethod
     def print(cls, text, outputlevel=0):
+        # Print if reuqested level is below output level
         if outputlevel <= cls.level:
             print(text)
 
@@ -24,8 +24,10 @@ def sanitizePath(path):
     # Incase backwards / for path
     path = path.replace('\\', '/')
 
+    # Get each section of the path
     pathparts = path.split('/')
     path = []
+    # Remove all invalid parts from the filename
     for segment in pathparts:
         if segment not in INVALID_PATH_PARTS:
             path.append(segment)

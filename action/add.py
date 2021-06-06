@@ -13,7 +13,7 @@ from action.compress import CompressionTypes, Compress
 
 
 def add(filename, path, compresstype, offset):
-    version = 20
+    version = 46 # Bzip2
     flags = 0
     extra = b""
 
@@ -26,7 +26,6 @@ def add(filename, path, compresstype, offset):
     # info("Compressing " + filename + "...")
 
     modtime, moddate = mktime(time.localtime(fileinfo.st_ctime))
-    filenamelen = len(filename)
 
     compressed = Compress(f, compresstype)
 
@@ -38,9 +37,6 @@ def add(filename, path, compresstype, offset):
     else:
         data = f
         compresstype = CompressionTypes.STORE.value
-
-    # deflate = zlib.compressobj(9, zlib.DEFLATED, -zlib.MAX_WBITS)
-    # data = deflate.compress(f) + deflate.flush()
 
     checksum = crc32(f)
 

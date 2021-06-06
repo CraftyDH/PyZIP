@@ -4,8 +4,8 @@ import zipfile
 import os
 import shutil
 import filecmp
-from tools import sanitizePath
 
+os.chdir("test")
 
 def checkFileEqual(self, f1, f2):
     with open(f1) as first:
@@ -67,24 +67,6 @@ def extract(files=[]):
     runPyzip(["test.zip", "extract", *files, "-o", "test"])
 
 
-class Test_Sanitization(unittest.TestCase):
-    def test(self):
-        self.assertEqual(sanitizePath("path"), "path")
-        self.assertEqual(sanitizePath("C:/path"), "path")
-        self.assertEqual(sanitizePath("D://path"), "path")
-        self.assertEqual(sanitizePath("../../../../path"), "path")
-        self.assertEqual(sanitizePath("path/path/path"),
-                         "path{0}path{0}path".format(os.sep))
-        self.assertEqual(sanitizePath("path/path/../path"),
-                         "path{0}path{0}path".format(os.sep))
-        self.assertEqual(sanitizePath("path\\path\\path"),
-                         "path{0}path{0}path".format(os.sep))
-        self.assertEqual(sanitizePath("path//path//path"),
-                         "path{0}path{0}path".format(os.sep))
-        self.assertEqual(sanitizePath("path\\\\path\\\\path"),
-                         "path{0}path{0}path".format(os.sep))
-
-
 class Test_Add(unittest.TestCase):
     def testCleanAdd(self):
         clean()
@@ -116,6 +98,42 @@ class Test_Add(unittest.TestCase):
 
         add(["testfiles/1.md"])
         add(["testfiles/2.md", "testfiles/3.md"])
+
+        with zipfile.ZipFile("test.zip") as f:
+            f.extractall("test")
+
+        checkFolders(self)
+
+    def testAddStore(self):
+        clean()
+        copyToCheck(["testfiles/1.md", "testfiles/2.md",
+                     "testfiles/3.md"])
+
+        add(["testfiles/1.md", "testfiles/2.md", "testfiles/3.md", "-s"])
+
+        with zipfile.ZipFile("test.zip") as f:
+            f.extractall("test")
+
+        checkFolders(self)
+
+    def testAddDeflate(self):
+        clean()
+        copyToCheck(["testfiles/1.md", "testfiles/2.md",
+                     "testfiles/3.md"])
+
+        add(["testfiles/1.md", "testfiles/2.md", "testfiles/3.md", "-d"])
+
+        with zipfile.ZipFile("test.zip") as f:
+            f.extractall("test")
+
+        checkFolders(self)
+
+    def testAddBzip2(self):
+        clean()
+        copyToCheck(["testfiles/1.md", "testfiles/2.md",
+                     "testfiles/3.md"])
+
+        add(["testfiles/1.md", "testfiles/2.md", "testfiles/3.md", "-b"])
 
         with zipfile.ZipFile("test.zip") as f:
             f.extractall("test")

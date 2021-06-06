@@ -53,7 +53,7 @@ __compress = __add.add_mutually_exclusive_group()
 __compress.add_argument("-d", "--deflate", action="store_const", default=8,
                         const=8, dest="compresstype")
 __compress.add_argument("-b", "--bzip2", action="store_const",
-                        const=46, dest="compresstype")
+                        const=12, dest="compresstype")
 __compress.add_argument("-s", "--store", action="store_const",
                         const=0, dest="compresstype")
 # Set args for remove action
