@@ -1,8 +1,6 @@
 # See https://users.cs.jmu.edu/buchhofp/forensics/formats/pkzip.html
-from mmap import mmap
-from struct import *
 from collections import namedtuple
-
+from struct import *
 
 header = namedtuple("header", ['signature', 'version', 'flags', 'compression', 'modtime',
                     'moddate', 'checksum', 'compressedsize', 'uncommpressedsize', 'filenamelen', 'extralen'])

@@ -1,13 +1,14 @@
 import datetime
-import time
 import os
-from datetime import date
+import time
+
 INVALID_PATH_PARTS = ('', '.', '..')
 
 
 class info():
     level = None
 
+    # Set the silence level
     @classmethod
     def set(cls, level):
         cls.level = level
@@ -44,14 +45,17 @@ def mkdostime(ctime: time.struct_time):
     return (modtime, moddate)
 
 def mktime(modtime, moddate):
-    # Modtime 
+    # Modtime inverse of mkdostime
     sec = modtime & 0b11111 * 2
     min = modtime >> 5 & 0b111111
     hour = modtime >> 11
 
+    # Moddate inverse of mkdostime
     day = moddate & 0b11111
     month = moddate >> 5 & 0b1111
     year = moddate >> 9
+
+    # Generate UTC time
     return datetime.datetime(year, month, day, hour, min, sec)
 
 
@@ -70,6 +74,7 @@ def writeChanges(name, newfile):
 # https://stackoverflow.com/questions/1094841/get-human-readable-version-of-file-size
 def sizeof_fmt(num):
     for unit in ['B', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB']:
+        # Interact until best unit is found by dividing by 1024
         if abs(num) < 1024.0:
             return "%3.0f %s" % (num, unit)
         num /= 1024.0

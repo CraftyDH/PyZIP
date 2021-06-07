@@ -1,6 +1,6 @@
-import zlib
 import bz2
 import enum
+import zlib
 
 
 class CompressionTypes(enum.Enum):
@@ -32,7 +32,7 @@ class CompressionTypes(enum.Enum):
     ZSTD_LEGACY     = 20
     IBM_CMPSC       = 16
 
-def Compress(content, code):
+def Compress(content: str, code: int):
     # Store so just return data
     if code == CompressionTypes.STORE.value:
         return content
@@ -49,7 +49,7 @@ def Compress(content, code):
         print(CompressionTypes(code).name + " not supported.")
 
 
-def Decompress(content, code):
+def Decompress(content: str, code: int):
     # Store so just return data
     if code == CompressionTypes.STORE.value:
         return content

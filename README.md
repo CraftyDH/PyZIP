@@ -1,8 +1,11 @@
 # PyZIP
-A Python command line implementation of ZIP using only std.
+A Python command line implementation of ZIP using only std libraries. 
 
 ## Supports
-Currently PyZIP supports compression and uncompression using DEFLATE and BZip2.
+Currently PyZIP supports compression and uncompression using DEFLATE and BZip2. 
+
+PyZip currently is verified to run on windows with python 3.9. As this project uses os abtractions it should work on any os.
+The zip output has been tested with windows explorer and 7zip as such it should would with any zip compatible program.
 
 ## Usage
 ### To add a file to an archive

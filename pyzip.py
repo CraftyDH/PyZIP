@@ -1,22 +1,19 @@
 #!/usr/bin/env python
+import mmap
 import os
-from typing import Union
-from unittest.case import expectedFailure
+import shutil
+import tempfile
+from struct import *
+
+import argparser
+import compress as compress
+import structs
 from add import add
 from read import readFile
-import argparser
-import mmap
-from struct import *
-import structs
-import tempfile
-import shutil
-import time
 from tools import *
-import zlib
-import compress as compress
 
 
-def writeDirectory(zip, centraldirectory, offset):
+def writeDirectory(zip, centraldirectory: list, offset: int):
     centraldirectorysize = 0
     for directory in centraldirectory:
         centralheader, filename, extra, comment = directory.values()
@@ -89,20 +86,23 @@ def run(args: str = None):
             # Start reading the entries
             zipmm.seek(endofcentral.offsetcentral)
             for _ in range(endofcentral.totalentries):
+                # Create entry object
                 entry = {}
+                # Unpack header from file
                 centralheader = structs.centralHeader._make(
                     structs.centralHeaderStruct.unpack(zipmm.read(structs.centralHeaderStruct.size)))
 
-                print(centralheader)
+                info.print(centralheader, 3)
 
+                # Unpack other info from the file
                 entry["header"] = centralheader
                 entry["filename"] = sanitizePath(str(zipmm.read(
                     centralheader.filenamelen), 'utf-8'))
-                print(zipmm.tell())
                 entry["extra"] = zipmm.read(
                     centralheader.extralen)
                 entry["comment"] = str(zipmm.read(
                     centralheader.commentlen), 'utf-8')
+                # Add file to central directory
                 centralDirectory.append(entry)
 
     # Call function to handle each task case
@@ -117,7 +117,7 @@ def run(args: str = None):
             # Check if file is in the zip file allready
             if file["filename"] in [addpath + os.sep + name for name in args.files]:
                 info.print('Overriding "' +
-                           path + '" found in zip file.')
+                           file["filename"] + '" found in zip file.')
                 # remove file from central directory
                 centralDirectory.remove(file)
                 continue
@@ -158,19 +158,23 @@ def run(args: str = None):
         newCentralDirectory = []
         # Read into
         for file in centralDirectory:
+            # Ensure file is not to be removed
             if file["filename"] not in args.files:
+                # Read the file
                 header, fname, extra, content = readFile(
                     origin, file["header"].localoffset)
-
+                # And write it into the new ZIP file
                 towrite = structs.headerStruct.pack(
                     *header) + fname + extra + content
 
+                # Fix offset in central directory
                 newDirectory = file
                 newHeader: structs.centralHeader = file["header"]
                 newHeader = newHeader._replace(localoffset=offset)
                 newDirectory["header"] = newHeader
                 newCentralDirectory.append(newDirectory)
 
+                # Write all changes
                 offset += len(towrite)
                 newfile.write(towrite)
 
@@ -178,6 +182,7 @@ def run(args: str = None):
             print("Removed all files")
             quit(0)
 
+        # Finish writing the ZIP file
         writeDirectory(newfile, newCentralDirectory, offset)
         writeChanges(args.zip, newfile)
 
@@ -186,22 +191,28 @@ def run(args: str = None):
             # No folders 7zip!!!
             if file["filename"][-1] == "/":
                 continue
+            # Only extract the files requested
             if args.files:
                 if file["filename"] not in args.files:
                     continue
             info.print('Extracting: "' + file["filename"] + '"')
 
+            # Read the file
             header, fname, extra, content = readFile(
                 origin, file["header"].localoffset)
 
+            # Decompress the file
             data = compress.Decompress(content, header.compression)
 
+            # Make the directories for the file
             outputpath = os.path.join(
                 args.output, file["filename"])
             os.makedirs(os.path.dirname(outputpath), exist_ok=True)
+            # Write the file
             with open(outputpath, "w+b") as _file:
                 _file.write(data)
 
+            # Try to update the time to the modtime
             try:
                 time = mktime(header.modtime, header.moddate)
                 time = time.timestamp()
@@ -209,23 +220,15 @@ def run(args: str = None):
             # Windows sometimes wont let this operation happen
             except OSError:
                 pass
-            
 
     elif args.action == "info":
         info.print("Zip file: " + os.path.basename(args.zip))
         info.print("Files:")
+        # Print basic info from the central directory
         for file in centralDirectory:
             header = file["header"]
             info.print("⤷ " + file["filename"] +
-                        " " + compress.CompressionTypes(header.compression).name + sizeof_fmt(header.uncommpressedsize))
-    # def info(text: str, level=0):
-    #     if args.verbosity >= level:
-    #         print(text)
-
-    # info(args, 3)
-
-    # origin.truncate()
-    # origin.close()
+                       " " + compress.CompressionTypes(header.compression).name + sizeof_fmt(header.uncommpressedsize))
 
 
 if __name__ == "__main__":
