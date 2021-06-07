@@ -69,7 +69,5 @@ __extract.add_argument(
 
 # Set args for info action
 __info = __subparser.add_parser("info")
-__info.add_argument("file", default=[], nargs="?",
-                    help="shows infomation about the file/folder")
 __info.add_argument("-r", "--recursive",
                     help="shows info recursively through each folder")

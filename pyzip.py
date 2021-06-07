@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 import os
 from typing import Union
-from action.add import add
-from action.read import readFile
+from unittest.case import expectedFailure
+from add import add
+from read import readFile
 import argparser
 import mmap
 from struct import *
@@ -12,7 +13,7 @@ import shutil
 import time
 from tools import *
 import zlib
-import action.compress as compress
+import compress as compress
 
 
 def writeDirectory(zip, centraldirectory, offset):
@@ -201,24 +202,22 @@ def run(args: str = None):
             with open(outputpath, "w+b") as _file:
                 _file.write(data)
 
+            try:
+                time = mktime(header.modtime, header.moddate)
+                time = time.timestamp()
+                os.utime(outputpath, (time, time))
+            # Windows sometimes wont let this operation happen
+            except OSError:
+                pass
+            
+
     elif args.action == "info":
-        # List in depth info about each file
-        if args.file:
-            for file in centralDirectory:
-                if file["filename"] == os.path.basename(args.file):
-                    header = file["header"]
-                    info.print("File: " + file["filename"])
-                    break
-            else:
-                print("File not in zip.")
-        # List info about zip file
-        else:
-            info.print("Zip file: " + os.path.basename(args.zip))
-            info.print("Files:")
-            for file in centralDirectory:
-                header = file["header"]
-                info.print("⤷ " + file["filename"] +
-                           sizeof_fmt(header.uncommpressedsize))
+        info.print("Zip file: " + os.path.basename(args.zip))
+        info.print("Files:")
+        for file in centralDirectory:
+            header = file["header"]
+            info.print("⤷ " + file["filename"] +
+                        " " + compress.CompressionTypes(header.compression).name + sizeof_fmt(header.uncommpressedsize))
     # def info(text: str, level=0):
     #     if args.verbosity >= level:
     #         print(text)

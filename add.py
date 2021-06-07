@@ -1,12 +1,12 @@
 from argparse import Namespace
 import os
 import time
-from tools import mktime
+from tools import mkdostime
 from zlib import crc32
 import zlib
 import structs
 import mmap
-from action.compress import CompressionTypes, Compress
+from compress import CompressionTypes, Compress
 
 
 # def write(content, header, zip):
@@ -25,7 +25,7 @@ def add(filename, path, compresstype, offset):
     os.path.abspath(filename)
     # info("Compressing " + filename + "...")
 
-    modtime, moddate = mktime(time.localtime(fileinfo.st_ctime))
+    modtime, moddate = mkdostime(time.localtime(fileinfo.st_ctime))
 
     compressed = Compress(f, compresstype)
 

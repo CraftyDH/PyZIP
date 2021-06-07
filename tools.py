@@ -1,6 +1,7 @@
+import datetime
 import time
 import os
-
+from datetime import date
 INVALID_PATH_PARTS = ('', '.', '..')
 
 
@@ -35,12 +36,23 @@ def sanitizePath(path):
     return os.path.sep.join(path)
 
 
-def mktime(ctime: time.struct_time):
+def mkdostime(ctime: time.struct_time):
     # Time (5 Hour) (6 Minute) (5 Second ( divided by zero ))
     modtime = ctime.tm_hour << 11 | ctime.tm_min << 5 | ctime.tm_sec // 2
     # Date (7 Year) (4 Month) (5 Day)
     moddate = (ctime.tm_year - 1980) << 9 | ctime.tm_mon << 5 | ctime.tm_mday
     return (modtime, moddate)
+
+def mktime(modtime, moddate):
+    # Modtime 
+    sec = modtime & 0b11111 * 2
+    min = modtime >> 5 & 0b111111
+    hour = modtime >> 11
+
+    day = moddate & 0b11111
+    month = moddate >> 5 & 0b1111
+    year = moddate >> 9
+    return datetime.datetime(year, month, day, hour, min, sec)
 
 
 def writeChanges(name, newfile):
