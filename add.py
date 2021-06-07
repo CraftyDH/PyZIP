@@ -9,7 +9,7 @@ from tools import mkdostime
 
 
 def add(filename: str, path: pathlib.Path, compresstype: int, offset: int):
-    version = 46 # Bzip2
+    version = 46  # Bzip2
     flags = 0
     extra = b""
 
@@ -28,10 +28,8 @@ def add(filename: str, path: pathlib.Path, compresstype: int, offset: int):
     # Create the checksum for the file
     checksum = crc32(f)
 
-
     # Only set compressed if lower
     if len(compressed) < len(f):
-        print("Good")
         data = compressed
     # Otherwise just store it
     else:

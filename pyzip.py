@@ -11,6 +11,7 @@ import structs
 from add import add
 from read import readFile
 from tools import *
+from zlib import crc32
 
 
 def writeDirectory(zip, centraldirectory: list, offset: int):
@@ -47,7 +48,8 @@ def run(args: str = None):
     if not os.path.exists(args.zip):
         # If action is add an empty file is allowed
         if args.action != "add":
-            info("There is no file named: " + args.zip + "\nQuiting...", 0)
+            info.print("There is no file named: " +
+                       args.zip + "\nQuiting...", 0)
             exit(0)
         # Therefore create the file
         else:
@@ -115,7 +117,7 @@ def run(args: str = None):
         # Read into
         for file in centralDirectory:
             # Check if file is in the zip file allready
-            if file["filename"] in [addpath + os.sep + name for name in args.files]:
+            if addpath + os.sep + file["filename"] in [addpath + os.sep + name for name in args.files]:
                 info.print('Overriding "' +
                            file["filename"] + '" found in zip file.')
                 # remove file from central directory
@@ -136,7 +138,7 @@ def run(args: str = None):
             offset += len(towrite)
 
         for file in args.files:
-            info.print('Adding "' + file + '" to zip file.', 1)
+            info.print('Adding "' + file + '" to zip file.')
             # Get file metadata
             write, header = add(file, addpath, args.compresstype, offset)
             # Write file
@@ -177,6 +179,9 @@ def run(args: str = None):
                 # Write all changes
                 offset += len(towrite)
                 newfile.write(towrite)
+            else:
+                info.print('Removing "' +
+                           file["filename"] + '" from zip file.')
 
         if not newCentralDirectory:
             print("Removed all files")
@@ -203,6 +208,12 @@ def run(args: str = None):
 
             # Decompress the file
             data = compress.Decompress(content, header.compression)
+
+            # Check that file matches crc32
+            if crc32(data) != header.checksum:
+                info.print('File: ' + file["filename"] +
+                           ' failed crc32. Skipping...')
+                continue
 
             # Make the directories for the file
             outputpath = os.path.join(

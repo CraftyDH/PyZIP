@@ -13,7 +13,7 @@ def checkZIP(path: str):
             return path
         check = input("File not a ZIP, Overide? ([y]/n): ")
         if not (check == "y" or check == "yes" or check == ""):
-            exit()
+            exit(0)
     return path
 
 
@@ -24,7 +24,7 @@ def checkFile(path: str):
     """
     if not os.path.exists(path):
         print('File: "' + path + '", is not readable.')
-        exit()
+        exit(0)
     return path
 
 
@@ -68,5 +68,3 @@ __extract.add_argument(
 
 # Set args for info action
 __info = __subparser.add_parser("info")
-__info.add_argument("-r", "--recursive",
-                    help="shows info recursively through each folder")
